@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Relatório das atualizações Docker e correções de autenticação feitas no projeto Laravel 13.">
+    <title>Relatório de implementações — Laravel 13</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #172033;
+            --muted: #596579;
+            --line: #dce3ed;
+            --surface: #ffffff;
+            --background: #f3f6fb;
+            --accent: #e34f4f;
+            --accent-dark: #a92e38;
+            --success: #18764b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--ink);
+            font: 16px/1.65 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        main {
+            width: min(940px, calc(100% - 32px));
+            margin: 40px auto;
+        }
+
+        header,
+        section,
+        footer {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 26px 30px;
+            margin-bottom: 18px;
+        }
+
+        header {
+            border-top: 5px solid var(--accent);
+        }
+
+        h1,
+        h2,
+        h3 {
+            line-height: 1.25;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+        }
+
+        h2 {
+            margin: 0 0 14px;
+            font-size: 1.35rem;
+        }
+
+        h3 {
+            margin: 20px 0 8px;
+            font-size: 1.05rem;
+        }
+
+        p {
+            margin: 8px 0 12px;
+        }
+
+        a {
+            color: var(--accent-dark);
+            text-decoration-thickness: 1px;
+            text-underline-offset: 3px;
+        }
+
+        code {
+            border-radius: 4px;
+            background: #f0f3f8;
+            padding: 2px 6px;
+            font-size: 0.92em;
+        }
+
+        .eyebrow,
+        .muted {
+            color: var(--muted);
+        }
+
+        .eyebrow {
+            margin: 0 0 6px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .summary {
+            max-width: 720px;
+            color: var(--muted);
+            font-size: 1.08rem;
+        }
+
+        .status {
+            display: inline-block;
+            border-radius: 999px;
+            background: #e8f5ee;
+            color: var(--success);
+            padding: 5px 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        ul,
+        ol {
+            padding-left: 22px;
+        }
+
+        li + li {
+            margin-top: 7px;
+        }
+
+        .result {
+            border-left: 3px solid var(--success);
+            padding-left: 14px;
+        }
+
+        footer {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        @media (max-width: 600px) {
+            main {
+                width: min(100% - 20px, 940px);
+                margin: 14px auto;
+            }
+
+            header,
+            section,
+            footer {
+                padding: 20px;
+            }
+        }
+
+        @media print {
+            body {
+                background: #fff;
+            }
+
+            main {
+                width: 100%;
+                margin: 0;
+            }
+
+            header,
+            section,
+            footer {
+                break-inside: avoid;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <header>
+        <p class="eyebrow">Projeto Laravel 13</p>
+        <h1>Relatório de implementações</h1>
+        <p class="summary">Resumo das atualizações do ambiente Docker e das correções realizadas no fluxo de autenticação da API.</p>
+        <p><strong>Data:</strong> 24 de novembro de 2026</p>
+        <span class="status">Concluído e validado</span>
+    </header>
+
+    <section>
+        <h2>1. Atualização do ambiente Docker</h2>
+        <p>As configurações do PHP-FPM e do Compose foram alinhadas aos requisitos do Laravel 13, que exige PHP 8.3 ou superior.</p>
+        <ul>
+            <li><a href="Dockerfile">Dockerfile</a>: imagem atualizada para PHP 8.4 FPM, com Composer 2 e extensões PHP utilizadas pelo projeto.</li>
+            <li>Extensões habilitadas: <code>bcmath</code>, <code>exif</code>, <code>gd</code>, <code>mbstring</code>, <code>oci8</code>, <code>pcntl</code>, <code>pdo_mysql</code>, <code>pdo_sqlite</code>, <code>xdebug</code> e <code>zip</code>.</li>
+            <li>Usuário e grupo do container configurados por UID/GID, com valores padrão 1000, para reduzir problemas de permissões nos arquivos montados.</li>
+            <li><a href="docker-compose.yml">docker-compose.yml</a>: serviços PHP-FPM e Nginx; aplicação publicada na porta 9090; Xdebug configurado na porta 9003.</li>
+            <li>Adicionado <code>host.docker.internal</code> via <code>host-gateway</code> para permitir a comunicação do Xdebug com o host em Linux.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>2. Correção da criação de tokens</h2>
+        <p>O erro <code>Call to undefined method App\Models\User::createToken()</code> acontecia porque o modelo de usuário não utilizava o trait fornecido pelo Laravel Sanctum.</p>
+        <ul>
+            <li>Adicionado <code>Laravel\Sanctum\HasApiTokens</code> ao modelo <a href="app/Models/User.php">User</a>.</li>
+            <li>Com isso, o método <code>createToken()</code> usado no login pode emitir tokens de acesso pessoal.</li>
+            <li>O teste de login verifica a resposta HTTP 201 e a presença do token no JSON.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>3. Resposta de autenticação para rotas da API</h2>
+        <p>O erro <code>Route [login] not defined</code> surgia quando uma requisição não autenticada às rotas da API acionava o redirecionamento padrão do middleware para uma rota web inexistente.</p>
+        <ul>
+            <li>Em <a href="bootstrap/app.php">bootstrap/app.php</a>, o redirecionamento de convidados foi configurado para não gerar URL de login nas rotas <code>api</code> e <code>api/*</code>.</li>
+            <li>O tratamento existente de exceções para rotas da API retorna uma resposta JSON de não autenticado, com status HTTP 401.</li>
+            <li>O redirecionamento padrão para as demais rotas foi preservado.</li>
+            <li>O teste cobre uma requisição sem autenticação e sem cabeçalho <code>Accept: application/json</code>, confirmando que a API não tenta redirecionar.</li>
+        </ul>
+        <p>As rotas atuais estão em <a href="routes/api.php">routes/api.php</a>; o grupo protegido utiliza o middleware <code>auth:sanctum</code>.</p>
+    </section>
+
+    <section>
+        <h2>4. Testes e validações</h2>
+        <ul>
+            <li>Build da imagem Docker concluído com sucesso.</li>
+            <li>Configuração do Compose validada com <code>docker compose config --quiet</code>.</li>
+            <li>Imagem executada para confirmar PHP 8.4 e carregamento das extensões listadas acima.</li>
+            <li>Manifesto Composer validado.</li>
+            <li>Testes focados de autenticação: <strong>2 testes passaram, com 5 asserções</strong>.</li>
+            <li>Verificação de formatação com Laravel Pint aprovada para os arquivos PHP alterados.</li>
+            <li>Verificação de whitespace com <code>git diff --check</code> aprovada.</li>
+        </ul>
+        <p class="result"><strong>Resultado:</strong> a imagem Docker atende à versão mínima de PHP do Laravel 13; o login pode criar tokens Sanctum; e requisições não autenticadas à API recebem 401 JSON em vez de falharem ao procurar a rota web <code>login</code>.</p>
+    </section>
+
+    <footer>
+        <p>Relatório gerado para documentar as alterações realizadas no workspace. Os links apontam para arquivos relativos à raiz do projeto.</p>
+    </footer>
+</main>
+</body>
+</html>
